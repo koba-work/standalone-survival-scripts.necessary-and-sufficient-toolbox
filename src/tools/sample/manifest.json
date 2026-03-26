@@ -1,0 +1,20 @@
+{
+  "name": "Sample",
+  "version": "1.0",
+  "description": "Sample of tool",
+  "usage": "名前を入力して、実行ボタンを押してください",
+  "params": [
+    { "id": "name", "label": "名前", "type": "str", "required": true, "usage": "任意の文字列" }
+  ],
+  "actions": [
+    {
+      "id": "execute",
+      "label": "実行",
+      "return": { "label": "実行結果", "type": "str" }
+    }
+  ],
+  "imports": {
+    // "localStorage": "localStorage",
+    // "restApi": "restApi@1.5"
+  }
+}

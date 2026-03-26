@@ -1,0 +1,25 @@
+{
+  "title": "Sample Tools",
+  "toolbox": {
+    "template": "templates/default.html",
+    "style": "styles/light-theme.css",
+    "navigation": [
+      { "label": "Group 1", "items": [
+        { "label": "Sample", "target": "sample" }
+      ]},
+      { "label": "Group 2", "items": [
+        { "label": "Sample", "target": "sample" },
+        { "label": "Foo tool", "target": "foo" },
+        { "label": "Bar tool", "target": "bar" }
+      ]},
+      { "label": "Hoge", "target": "hoge" }
+    ]
+  },
+  "tools": {
+    "sample": { "type": "inline", "path": "sample" },
+    "foo":    { "type": "module", "path": "foo.html" },
+    "bar":    { "type": "module", "path": "modules/bar.html" },
+    "hoge":   { "type": "inline", "path": "hoge" }
+  },
+  "renderer": "standard"
+}
