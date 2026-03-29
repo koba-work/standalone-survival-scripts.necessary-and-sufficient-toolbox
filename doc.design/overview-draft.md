@@ -1,7 +1,7 @@
 ## 概要の概要
-- html + インラインjsによる1ファイルツール
+- html + インラインjsによるツール
 - 外部ライブラリ、cssに依存しない
-- CLIのGUI化したような設計思想で、ツールはシンプルな入出力と1つの役割を持つ
+- CLIのGUI化したような設計思想で、1つのツールはシンプルな入出力と1つの役割を持つ
 
 ## 想定利用環境
 以下のような、まともな既存システムも無え！　新規開発も無え！　まともな認可済みソフトも無え！
@@ -44,29 +44,35 @@
   - 2. @developer コア関数のパラメータやヘルプについてマニフェストを記載する
 - ビルド
   - 1. @system テンプレートhtmlにツールのマニフェストやコア関数、メタデータやレンダラーを埋め込む
+  - 2. @system （静的生成の場合）メタデータに基づき入出力用のUIを自動生成する。
 - 実行
-  - 1. @system （静的生成の場合）マニフェストに基づき入力用のDOM、実行ボタン、出力用のDOMを自動生成する。
-  - 2. @user ツールに入力し、実行する
-  - 3. @system DOMのデータを読み取り、対象関数を実行し、結果をDOM（クリップボード、ダウンロード含む）に出力する
+  - 1. @user ツールボックスからツールを選択する
+  - 2. @system ツールをタープ（実行領域）上にロードする
+  - 3. @system （動的生成の場合）メタデータに基づき入出力用のUIを自動生成する。
+  - 4. @user ツールに入力し、実行する
+  - 5. @system DOMのデータを読み取り、対象関数を実行し、結果をUI（クリップボード、ダウンロード含む）に出力する
 
 
 ## 構成要素
-### ツールボックス
+### 実行時
+#### ツールボックス
 - CLIにおけるシェルに相当
 - ビルダーによって生成される
 - 役割
   - ツール（コマンド）の管理
-  - ツールのナビゲーション（一覧）の提供
+  - ツール一覧の提供
   - 一時変数を表示・設定するUIの提供
   - コンポジションを入力するUIの提供
 
+#### ブルーシート（Tarp）
+- ツールをロードする領域
 
-### ツール
-ツールボックスから選択され、実行される
+#### ツール
+- ツールボックスから選択され、実行される
+- CLIにおける1個のコマンドに相当
 
-#### フレーム
-- CLIにおけるシェルのUIに相当
-- ビルド時に指定されたレンダラーによってマニフェストから生成される
+##### ツールUI
+- ビルド時に指定されたRendererによってメタデータを基に生成される
 - 役割
   - 入力インターフェースの提供
     - コア関数が必要とするパラメータの入力DOMを表示する
@@ -77,7 +83,40 @@
   - 出力インターフェースの提供
     - コア関数の結果をDOM、ダウンロード、クリップボードへ出力する
 
-#### マニフェスト
+##### コア関数
+- ツールの機能として実行される関数
+- DOMから切り離されたサンドボックス内で実行される
+
+#### Renderer
+ツールのメタデータからDOMを生成する
+
+#### Adapter
+Rendererが生成したDOMをコア関数の入出力に使えるよう、DOMのデータ入出力、イベントの制御を行う
+
+
+
+### ビルド
+#### ビルダー
+- ツールのマニフェストと関数、ツールボックスのテンプレートからツールボックスをビルドする
+- ビルドに必要な入力
+  - ツールボックスのブループリント（toolbox-template.html, toolbox.css, toolbox-package.json）
+  - ツールのブループリント（マニフェスト、関数）
+  - レンダラー
+- モード
+  - ビルトイン
+    - ツールボックスにツールをインラインスクリプトとして埋め込む
+    - 全てのツールをビルトイン化したツールボックスは、1ファイルになる（スイスアーミーナイフ）
+  - ユニット
+    - ツールをツールボックスから分離したjsファイルにビルドする
+    - ツールボックスはラベルと相対パスのみを持ち、当該ツールが選択されると動的にロードされる
+    - ツール単体でビルドできるため、リビルトと差し替え、手修正
+    - ツールボックスの定義もコンパクトなため追加・削除も容易
+
+
+#### ツールボックス・ブループリント
+
+#### ツール・ブループリント
+##### マニフェスト
 - ツールのメタデータ
 - ツール製作者が記述する
 - 役割
@@ -88,50 +127,88 @@
   - ストレージなどAPIのインポート
   - ヘルプ
 
-#### コア関数
+##### コア関数
 - CLIにおける1つのコマンド（実行体）に相当
 - ツール製作者が記述する
 - ピュアな関数で原則、入力は引数のみ、出力は戻り値（ストレージ）のみ
-- 通信やストレージも、APIを引数で受け取る
-- 他の関数をインポートして実行できる
+- 通信やストレージも、APIとして引数で受け取る
+- マニフェストに記述すれば、他の関数をインポートして再利用できる
 
 ### コンポジション
 - ツールの一種で、CLIにおけるパイプで繋がれたコマンド
 - ツールを一から実装しなくても、複数のツールを連結して新しいツールを組み立てられる
 - 不足している必須パラメータは各ツールのマニフェストから自動的に生成される
+- ビルド用のブループリントだけでなく、実行時に専用インターフェースから即興で組み立て、実行・登録てきる
 
 ```
 [
   { "$": "open", "filter": "csv" }, // ダイアログが表示
   { "$": "parse-csv", "src": "$" }, // "src": "$" は直前の結果をsrcの入力にする（省略時のデフォルト動作）
-  { "$": "table-to-json", "indent": 2 },
+  "table-to-json",                  // パラメータが全て省略できる場合はstring可
   { "$": "download", "defaults": { "name": "data.json" } }
 ]
 ```
 
 
-### ビルダー
-- ツールのマニフェストと関数、ツールボックスのテンプレートからツールボックスをビルドする
-- ビルドに必要な入力
-  - ツールボックスのテンプレート（html, css）
-  - ツール（マニフェスト、関数）
-  - レンダラー
-- モード
-  - インライン
-    - ツールボックスにツールをインラインスクリプトとして埋め込む
-    - 全てのツールをインライン化してビルドしたツールボックスは、1ファイルになる（スイスアーミーナイフ）
-  - モジュール
-    - ツールをツールボックスから分離したjsファイルにビルドする
-    - ツールボックスはラベルと相対パスのみを持ち、当該ツールが選択されると動的にロードされる
-    - ツール単体でビルドできるため、リビルトと差し替え、手修正
-    - ツールボックスの定義もコンパクトなため追加・削除も容易
+## 概略図
+```mermaid
+graph TD
+  subgraph SourceCode
+    subgraph ToolboxBlueprint
+      ToolboxTemplate[toolbox-template.html]
+      ToolboxStyle[toolbox.css]
+      ToolboxConfig[toolbox-package.json]
+    end
+    RendererPool
+    subgraph ToolBlueprint
+      Blueprint_Manifest[manifest.json]
+      Blueprint_CoreFunc[core-func.js]
+    end
+  end
+  
+  Builder
 
+  subgraph Runtime
+    subgraph ToolboxHtml[Toolbox.html]
+      subgraph Toolbox
+        subgraph BuiltInTool[Built-in Tool]
+          BuiltIn_Metadata[Metadata]
+          BuiltIn_CoreFunc[CoreFunc]
+        end
+      end
+      Renderer
+      subgraph Tarp
+        subgraph VisibleTool
+          subgraph ReadAdapter[Adapter]
+            InputDOM[DOM]
+          end
+          subgraph DeployedTool
+            Deployed_Metadata[Metadata]
+            Deployed_CoreFunc[CoreFunc]
+          end
+          subgraph WriteAdapter[Adapter]
+            OutputDOM[DOM]
+          end
+        end
+      end
+    end
+    subgraph UnitTool[UnitTool.js]
+      Module_Metadata[Metadata]
+      Module_CoreFunc[CoreFunc]
+    end
+  end
+  
+  ToolboxBlueprint -- source --> Builder
+  ToolBlueprint -- source --> Builder
+  RendererPool -- source --> Builder
+  Builder -- build ----> Toolbox
+  Builder -- build ----> UnitTool
 
-### レンダラー
-ツールのマニフェストからツールのフレームを生成する
-
-#### ジェネレータ
-フレームのDOM生成を担う
-
-#### コントローラー
-ジェネレータが生成したDOMをコア関数の入出力に使えるよう、DOMのデータ入出力、イベントの制御を行う
+  Toolbox -- dynamic_import --> UnitTool
+  Toolbox -- load --> DeployedTool
+  Renderer -- ref --> Deployed_Metadata
+  Renderer -- render --> ReadAdapter
+  Renderer -- render --> WriteAdapter
+  ReadAdapter -- input --> Deployed_CoreFunc
+  Deployed_CoreFunc -- output --> WriteAdapter
+```
